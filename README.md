@@ -30,23 +30,23 @@ The game is designed to be easy to play while providing satisfying progression t
 
 | Home | 
 
-| ![](screenshots/home.jpg) 
+| ![](ScreenShots/home.jpg) 
 
 | World Map | 
 
-| ![](screenshots/map.jpg) 
+| ![](ScreenShots/map.jpg) 
 
 | Mission | 
 
-| ![](screenshots/assemble-robot.jpg) 
+| ![](ScreenShots/assemble-robot.jpg) 
 
 | Mission | 
 
-| ![](screenshots/robot-hit-blocks.jpg) 
+| ![](ScreenShots/robot-hit-blocks.jpg) 
 
 | Level Complete |
 
-| ![](screenshots/level-completed.jpg) 
+| ![](ScreenShots/level-completed.jpg) 
 
 ---
 
