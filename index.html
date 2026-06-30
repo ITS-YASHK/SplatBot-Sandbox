@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>
+    
+    <title>SplatBot SandBox | Play Free Online Physics Game</title>
+    <meta name="description" content="SplatBot SandBox is an action-packed physics browser game designed and developed by Yash Chaurasia. Launch Sparky, explode TNT boxes, harvest rare scrap metal, and reconstruct your robot!">
+    <meta name="keywords" content="SplatBot SandBox, SplatBot, browser physics game, robot assembly game, Yash Chaurasia games, indie web game">
+    <meta name="author" content="Yash Chaurasia">
+    <link rel="canonical" href="https://yash-splatbot-launcher.netlify.app/">
+
+    <!-- Logo Fixes for Browser Icons -->
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <link rel="apple-touch-icon" href="logo.jpg">
+
+    <!-- Meta Tags Updated to logo.jpg -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://yash-splatbot-launcher.netlify.app/">
+    <meta property="og:title" content="SplatBot SandBox | Online Physics Game">
+    <meta property="og:description" content="SplatBot SandBox is designed and developed by Yash Chaurasia. Propel Sparky through the wasteland, harvest elements, and build the ultimate robot!">
+    <meta property="og:image" content="https://yash-splatbot-launcher.netlify.app/logo.jpg">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SplatBot SandBox">
+    <meta name="twitter:description" content="Help Sparky reassemble his missing components and slide into the Automated Repair Factory safely!">
+    <meta name="twitter:image" content="https://yash-splatbot-launcher.netlify.app/logo.jpg">
+
+    <link rel='stylesheet' href='style.css'>
+</head>
+<body>
+    <h1 style="display:none;">SplatBot SandBox - Designed and Developed by Yash Chaurasia</h1>
+
+    <!-- Simplified & Shortened Disclaimer Part -->
+    <div id='disclaimer' class='screen show'>
+        <div class='card'>
+            <div class='warn'>⚠️</div>
+            <h2>DEMO VERSION</h2>
+            <p>This game is under active development.</p>
+            
+            <hr style="border: 0; height: 1px; background: rgba(0,212,255,0.2); margin: 15px 0;">
+            
+            <div class="game-story-seo" style="text-align: center; font-size: 0.95rem; line-height: 1.5; color: #b8dfff; margin-bottom: 15px;">
+                <p>
+                    <strong>SplatBot SandBox</strong> is a high-flying physics browser game. 
+                    Launch <strong>Sparky</strong> across the wasteland, smash scrap towers, detonate TNT for boosts, and collect parts to rebuild your robot and reach the Automated Repair Factory!
+                </p>
+            </div>
+
+            <hr style="border: 0; height: 1px; background: rgba(0,212,255,0.2); margin: 15px 0;">
+
+            <p>Designed & Developed by</p>
+            <h3>
+                <a href="https://yashchaurasia.in/" target="_blank" rel="noopener" style="color: #00b7ff; text-decoration: none; font-weight: bold;">Yash Chaurasia</a>
+            </h3>
+        </div>
+    </div>
+
+    <!-- Splash Screen Image Fix -->
+    <div id='splash' class='screen'>
+        <div class='card splashCard'>
+            <img src='logo.jpg' class='logo' alt='SplatBot SandBox Action Logo'>
+            <h2 class='gameTitle'>SPLATBOT SANDBOX</h2>
+            <p class='loadingText'>Loading Engine Core...</p>
+            <div class='bar'>
+                <div id='fill'></div>
+            </div>
+            <div id='pct'>0%</div>
+        </div>
+    </div>
+
+    <iframe id='game' src='home.html' title="SplatBot SandBox Sandbox Execution Matrix Frame"></iframe>
+    
+    <script src='script.js'></script>
+</body>
+</html>

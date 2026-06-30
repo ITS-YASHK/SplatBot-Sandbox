@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SplatBot Sandbox - Robot Assembly Saga</title>
+    <!-- Tailwind CSS for modern design tokens -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .title-font {
+            font-family: 'Fredoka One', cursive;
+        }
+        /* Blueprint sidebar slide animation */
+        .blueprint-sidebar {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        /* Custom progress bar animations */
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.7)); }
+            50% { filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9)); }
+        }
+        .booster-glow {
+            animation: pulse-glow 1.5s infinite;
+        }
+        /* Blueprint grid styling */
+        .blueprint-grid {
+            background-size: 16px 16px;
+            background-image: linear-gradient(to right, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(14, 165, 233, 0.08) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white overflow-hidden flex flex-col justify-between h-screen relative">
+
+    <!-- Global Sound Effects & Music Generator utilizing Web Audio API -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSynthSfx(type) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                if (type === 'click') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.12);
+                } else if (type === 'weld') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(Math.random() * 200 + 100, audioCtx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'boost') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(45, audioCtx.currentTime + 0.8);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.85);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.85);
+                } else if (type === 'bounce') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                } else if (type === 'victory') {
+                    const notes = [261.63, 329.63, 392.00, 523.25];
+                    notes.forEach((freq, idx) => {
+                        const noteOsc = audioCtx.createOscillator();
+                        const noteGain = audioCtx.createGain();
+                        noteOsc.connect(noteGain);
+                        noteGain.connect(audioCtx.destination);
+                        noteOsc.type = 'triangle';
+                        noteOsc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.12);
+                        noteGain.gain.setValueAtTime(0.15, audioCtx.currentTime + idx * 0.12);
+                        noteGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.12 + 0.3);
+                        noteOsc.start(audioCtx.currentTime + idx * 0.12);
+                        noteOsc.stop(audioCtx.currentTime + idx * 0.12 + 0.3);
+                    });
+                }
+            } catch (e) {
+                console.log("Audio contexts pending user interaction gesture.", e);
+            }
+        }
+    </script>
+
+    <header class="bg-slate-900 border-b border-slate-800 p-2 sm:p-3 flex justify-between items-center z-10 flex-wrap gap-2">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="bg-blue-600 p-1.5 sm:p-2 rounded-xl shadow-lg border-2 border-blue-400">
+                <span class="title-font text-white text-sm sm:text-lg tracking-wider">SPLATBOT</span>
+            </div>
+            <div class="text-[10px] sm:text-xs bg-slate-800 py-0.5 sm:py-1 px-1.5 sm:px-2.5 rounded-lg border border-slate-700/50 text-slate-300">
+                Engine: <span id="engine-tier-display" class="font-bold text-yellow-400">Tier 1</span>
+            </div>
+        </div>
+        
+        <!-- Center objective tracker (Start -> Player -> Factory) -->
+        <div class="hidden lg:flex items-center gap-3 bg-slate-950/80 px-4 py-1.5 rounded-full border border-slate-800/80 text-xs">
+            <span class="text-slate-400 font-bold">REBUILD QUEST:</span>
+            <div class="flex items-center gap-1.5 text-slate-300">
+                <span id="obj-start-dot" class="text-emerald-400">🟢 Head</span>
+                <span class="text-slate-600">➔</span>
+                <span id="obj-bar-progress" class="font-bold text-cyan-400">0% Built</span>
+                <span class="text-slate-600">➔</span>
+                <span id="obj-factory-dot" class="text-slate-600">🏭 Factory</span>
+            </div>
+        </div>
+        
+        <div class="flex gap-2 sm:gap-3 items-center">
+            <div class="flex items-center gap-1 sm:gap-1.5 bg-yellow-500/20 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-yellow-500/30 text-xs sm:text-sm">
+                <span class="text-yellow-400">🪙</span>
+                <span id="scrap-display" class="font-bold text-yellow-300">10</span>
+            </div>
+            <div class="flex items-center gap-1 sm:gap-1.5 bg-cyan-500/20 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-cyan-500/30 text-xs sm:text-sm">
+                <span class="text-cyan-400">🔩</span>
+                <span id="metal-parts-display" class="font-bold text-cyan-300">0</span>
+            </div>
+            <button id="reset-prog-btn" class="text-[9px] sm:text-[10px] text-slate-500 hover:text-red-400 bg-slate-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-slate-700/30 transition-all">Reset</button>
+        </div>
+    </header>
+
+    <!-- Main Game Window Frame -->
+    <main class="relative flex-grow flex w-full bg-slate-900 overflow-hidden">
+        
+        <!-- Live HUD Stats -->
+        <div class="absolute top-3 left-3 z-20 pointer-events-none flex flex-col gap-1 sm:gap-1.5">
+            <div class="bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-800 text-[10px] sm:text-xs shadow-md backdrop-blur-sm">
+                <span class="text-slate-400">Flight Distance:</span> <span id="distance-display" class="font-bold text-cyan-400 text-xs sm:text-sm">0m</span>
+            </div>
+            <div class="bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-800 text-[10px] sm:text-xs shadow-md backdrop-blur-sm flex gap-2 sm:gap-3">
+                <div><span class="text-slate-400">Scrap+</span> <span id="run-scrap-display" class="font-bold text-yellow-400 text-xs sm:text-sm">0</span></div>
+                <div class="border-l border-slate-800 pl-2 sm:pl-3"><span class="text-slate-400">Metal+</span> <span id="run-metal-display" class="font-bold text-cyan-400 text-xs sm:text-sm">0</span></div>
+            </div>
+        </div>
+
+        <!-- Floating Blueprint Side Panel Toggle Button -->
+        <button id="toggle-blueprint-btn" class="absolute top-3 right-3 z-20 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10px] sm:text-xs py-1.5 sm:py-2 px-2.5 sm:px-3.5 rounded-xl border-b-4 border-cyan-800 active:border-b-0 active:translate-y-0.5 transition-all flex items-center gap-1.5 sm:gap-2 shadow-lg">
+            <span>🔧</span> <span id="blueprint-btn-label">Blueprints (0%)</span>
+        </button>
+
+        <!-- Blueprint Side Panel Overlay (Optimized for dynamic mobile sizing) -->
+        <div id="blueprint-panel" class="blueprint-sidebar absolute top-0 right-0 h-full w-full sm:w-80 bg-slate-900/95 border-l border-cyan-800/30 z-30 transform translate-x-full shadow-2xl flex flex-col blueprint-grid">
+            <div class="p-3 sm:p-4 border-b border-cyan-900/40 flex justify-between items-center bg-slate-950/80">
+                <div class="flex items-center gap-2">
+                    <span class="text-base sm:text-lg">🤖</span>
+                    <h3 class="title-font text-cyan-400 tracking-wide text-xs sm:text-sm">SPARKY BLUEPRINT</h3>
+                </div>
+                <button id="close-blueprint-btn" class="text-slate-400 hover:text-white text-xl p-1">✕</button>
+            </div>
+
+            <!-- Radial Progress Stats Circle -->
+            <div class="p-3 sm:p-4 flex items-center gap-3 sm:gap-4 bg-slate-950/30 border-b border-cyan-900/20">
+                <div class="relative w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center flex-shrink-0">
+                    <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-slate-800" stroke-width="3" stroke="currentColor" fill="transparent" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <path id="blueprint-radial-ring" class="text-cyan-400 transition-all duration-500" stroke-width="3.5" stroke-dasharray="0, 100" stroke-linecap="round" stroke="currentColor" fill="transparent" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    </svg>
+                    <span id="blueprint-percentage-text" class="title-font text-xs sm:text-sm text-cyan-300">0%</span>
+                </div>
+                <div>
+                    <h4 class="font-bold text-[11px] sm:text-xs text-slate-200">Reassembly Status</h4>
+                    <p class="text-[9px] sm:text-[10px] text-slate-400 leading-tight">Gather parts from destroyed metal towers to reconstruct Sparky.</p>
+                </div>
+            </div>
+
+            <!-- Scrollable assembly progress checklist list -->
+            <div id="assembly-checklist-container" class="flex-grow overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
+                <!-- Javascript will inject list items dynamically -->
+            </div>
+
+            <div class="p-3 sm:p-4 bg-slate-950 border-t border-cyan-950 flex flex-col gap-2">
+                <button id="assemble-action-btn" disabled class="w-full title-font py-2.5 sm:py-3.5 px-3 sm:px-4 rounded-xl text-xs tracking-wider text-white bg-slate-800 cursor-not-allowed border border-slate-700/50 text-center uppercase">
+                    Assemble Next Part (0/10 🔩)
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom SPLAT! Run Notification Banner -->
+        <div id="splat-banner" class="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-slate-950 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border-4 border-white shadow-2xl z-30 transition-all duration-300 scale-0 origin-center text-center w-[85%] max-w-sm">
+            <h2 class="title-font text-xl sm:text-2xl tracking-wide">SPLAT!</h2>
+            <p id="splat-banner-sub" class="text-[10px] sm:text-xs font-bold mt-1">You earned 50 scrap metal!</p>
+        </div>
+
+        <!-- Level Complete Factory Celebration Modal Screen (Responsive sizing) -->
+        <div id="level-complete-modal" class="hidden absolute inset-0 bg-slate-950/95 z-40 flex flex-col items-center justify-center p-4 sm:p-6 text-center">
+            <!-- Neon sci-fi blueprint wrapper border -->
+            <div class="w-full max-w-sm sm:max-w-md bg-slate-900 border-2 border-cyan-500 rounded-3xl p-4 sm:p-6 shadow-2xl relative blueprint-grid">
+                <!-- Glowing crown details -->
+                <div class="absolute -top-8 sm:-top-12 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-slate-950 title-font text-sm sm:text-lg py-1.5 sm:py-2 px-4 sm:px-6 rounded-2xl border-2 sm:border-4 border-white shadow-lg animate-bounce">
+                    🎉 MISSION COMPLETE!
+                </div>
+                
+                <h2 class="title-font text-cyan-400 text-lg sm:text-2xl tracking-wider mt-4 sm:mt-2 mb-1">ROBOT REASSEMBLED</h2>
+                <p class="text-[10px] sm:text-xs text-slate-400 mb-4 sm:mb-6">Sparky has returned safely to the Automated Factory! Level 1 Complete.</p>
+                
+                <!-- Match performance metric cards -->
+                <div class="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6 text-left">
+                    <div class="bg-slate-950/80 p-2 sm:p-3 rounded-xl border border-slate-800">
+                        <span class="text-[9px] sm:text-[10px] text-slate-500 uppercase block font-bold">Total Distance</span>
+                        <span id="stat-distance" class="text-cyan-400 font-bold text-sm sm:text-lg">1,600m</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-2 sm:p-3 rounded-xl border border-slate-800">
+                        <span class="text-[9px] sm:text-[10px] text-slate-500 uppercase block font-bold">Launches Used</span>
+                        <span id="stat-launches" class="text-yellow-400 font-bold text-sm sm:text-lg">12</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-2 sm:p-3 rounded-xl border border-slate-800">
+                        <span class="text-[9px] sm:text-[10px] text-slate-500 uppercase block font-bold">Total Scrap Earned</span>
+                        <span id="stat-scrap" class="text-yellow-400 font-bold text-sm sm:text-lg">450</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-2 sm:p-3 rounded-xl border border-slate-800">
+                        <span class="text-[9px] sm:text-[10px] text-slate-500 uppercase block font-bold">Metal Parts Found</span>
+                        <span id="stat-metal" class="text-cyan-400 font-bold text-sm sm:text-lg">200</span>
+                    </div>
+                </div>
+
+                <div class="bg-cyan-950/40 p-2.5 sm:p-3.5 rounded-xl border border-cyan-800/30 mb-4 sm:mb-6">
+                    <span class="text-[10px] sm:text-xs text-cyan-300 font-bold block mb-1">🎁 Factory Bonus Prize Reward:</span>
+                    <span class="text-xs sm:text-sm font-bold text-yellow-400">+500 Bonus Scrap Coins! 🪙</span>
+                </div>
+
+                <button id="level-complete-continue-btn" class="w-full title-font py-2.5 sm:py-3.5 px-4 sm:px-6 rounded-2xl text-xs sm:text-md text-slate-950 bg-gradient-to-b from-yellow-300 to-amber-500 hover:from-yellow-200 hover:to-amber-400 border-b-4 border-amber-700 active:border-b-0 active:translate-y-1 transition-all shadow-lg shadow-amber-500/20">
+                    UNLOCK LEVEL 2!
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas physics element -->
+        <div class="flex-grow h-full relative">
+            <canvas id="physics-canvas" class="block w-full h-full bg-gradient-to-b from-sky-400 via-sky-300 to-amber-50"></canvas>
+        </div>
+    </main>
+
+    <!-- Bottom Action Console Controls Footer (Optimized responsive grid layout) -->
+    <footer class="bg-slate-900 border-t-4 border-slate-800 p-2 sm:p-4 z-10">
+        <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 items-center">
+            
+            <!-- Column 1 (Left on desktop, Left on Mobile Top Row): Launch power oscillations -->
+            <div class="col-span-1 md:col-span-1 flex flex-col gap-1 bg-slate-950/40 p-2 rounded-xl border border-slate-800/80">
+                <div class="flex justify-between text-[10px] text-slate-400 px-1 font-bold">
+                    <span>LAUNCH POWER</span>
+                    <span id="power-value" class="font-bold text-red-400">50%</span>
+                </div>
+                <div class="h-5 sm:h-6 w-full bg-slate-950 rounded-lg overflow-hidden p-0.5 sm:p-1 flex items-center relative border border-slate-800">
+                    <div id="power-bar" class="h-full bg-gradient-to-r from-yellow-400 to-red-500 rounded-md transition-all duration-75" style="width: 50%;"></div>
+                </div>
+            </div>
+
+            <!-- Column 2 (Right on desktop, Right on Mobile Top Row): Shop progression engine values -->
+            <div class="col-span-1 md:col-span-1 flex gap-2 items-center bg-slate-950/40 p-2 rounded-xl border border-slate-800/80 justify-between">
+                <div class="flex flex-col">
+                    <span class="text-[9px] sm:text-xs text-slate-400 font-bold font-semibold uppercase">ENGINE UPGRADE</span>
+                    <span id="upgrade-cost-text" class="text-[9px] sm:text-[11px] text-yellow-400 font-bold">Cost: 30 🪙</span>
+                </div>
+                <button id="upgrade-btn" class="bg-gradient-to-b from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-[9px] sm:text-xs py-1.5 sm:py-2 px-2.5 sm:px-4 rounded-xl border-b-4 border-teal-800 active:border-b-0 active:translate-y-0.5 transition-all flex items-center gap-1">
+                    🚀 Up
+                </button>
+            </div>
+
+            <!-- Column 3 (Middle on desktop, Bottom full-width row on Mobile): Mega Game Actuations -->
+            <div class="col-span-2 md:col-span-1 order-last md:order-none flex gap-2 sm:gap-3 justify-center w-full">
+                <button id="launch-btn" class="flex-1 title-font py-2.5 sm:py-3.5 px-3 sm:px-6 rounded-2xl text-xs sm:text-lg tracking-wider text-slate-950 bg-gradient-to-b from-yellow-300 to-amber-500 hover:from-yellow-200 hover:to-amber-400 border-b-4 border-amber-700 active:border-b-0 active:translate-y-1 transition-all shadow-lg shadow-amber-500/20">
+                    LAUNCH!
+                </button>
+                <button id="booster-btn" disabled class="flex-1 title-font py-2.5 sm:py-3.5 px-2 sm:px-4 rounded-2xl text-[10px] sm:text-xs tracking-wider text-white bg-slate-800 border-b-4 border-slate-950 cursor-not-allowed opacity-50 transition-all shadow-lg">
+                    BOOSTER (OFF)
+                </button>
+            </div>
+
+        </div>
+    </footer>
+
+    <script>
+        // Centralized Game Balance Configuration
+        // All core variables are structured here to allow quick scaling tweaks.
+        const PHYSICS_CONFIG = {
+            gravity: 0.10,          // Gentle, floaty gravity to give slow-motion flight height
+            airResistance: 0.997,   // High-glide drag coefficient for an elegant glide phase
+            groundYOffset: 80,      // Viewport ground offset height boundary
+            
+            // Tier 1 Base Launch Mechanics
+            baseLaunchForce: 5.6,   // Perfect balance speed force (weak but guarantees reaching tower)
+            progressionFactor: 0.12,// 12% linear performance upgrade scale factor per engine level
+            
+            // Rocket Booster Config
+            boosterBaseX: 3.2,      // Horizontal boost baseline at Tier 1
+            boosterBaseY: 2.2,      // Vertical boost lift baseline at Tier 1
+            boosterStepX: 0.8,      // Horizontal booster step increase per level
+            boosterStepY: 0.5,      // Vertical booster lift step increase per level
+            
+            // Collision Momentum Conservation
+            metalConservationX: 0.94,// 94% horizontal speed conserved after smash reactions
+            metalDeflectionY: -0.42, // Upward deflection offset force on block hits
+            
+            // TNT Explosion Impulses
+            tntBaseImpulseX: 5.5,   // Horizontal push force from TNT at Tier 1
+            tntBaseImpulseY: 4.8,   // Vertical lift force from TNT at Tier 1
+            tntStepX: 0.6,          // Horizontal step increase per level
+            tntStepY: 0.5,          // Vertical step increase per level
+            
+            // Level Layout Positioning
+            firstTowerX: 360        // Placed close to guarantee early game hits
+        };
+
+        // Stage specifications for the Robot Assembly Progression System
+        const ASSEMBLY_STAGES = [
+            { name: "Head", cost: 0, desc: "The core computational brain box" },
+            { name: "Neck", cost: 10, desc: "Connects power paths to the spinal node" },
+            { name: "Chest", cost: 25, desc: "Hosts the main fusion micro-reactor" },
+            { name: "Left Arm", cost: 40, desc: "Equipped with mini welding tools" },
+            { name: "Right Arm", cost: 55, desc: "Equipped with high-grip magnets" },
+            { name: "Waist", cost: 70, desc: "Heavy-duty pelvic stabilizer block" },
+            { name: "Left Leg", cost: 90, desc: "Shock absorbing spring piston beam" },
+            { name: "Right Leg", cost: 110, desc: "Secondary support landing strut" },
+            { name: "Feet", cost: 130, desc: "Magnetic treads for uneven surfaces" },
+            { name: "Rocket Engine", cost: 160, desc: "Back-mounted solid booster exhaust" },
+            { name: "Complete Robot", cost: 200, desc: "Unlocks Level 1 End Goal: Enter the Factory!" }
+        ];
+
+        // Active State Profile (Loads with LocalStorage defaults)
+        const state = {
+            scrap: parseInt(localStorage.getItem('splatbot_scrap')) || 10,
+            metalParts: parseInt(localStorage.getItem('splatbot_metalParts')) || 0,
+            assemblyProgress: parseInt(localStorage.getItem('splatbot_assemblyStage')) || 0, // Current Stage level (0-10)
+            highScore: parseInt(localStorage.getItem('splatbot_highScore')) || 0,
+            engineLevel: parseInt(localStorage.getItem('splatbot_engineLevel')) || 1,
+            launchesUsed: parseInt(localStorage.getItem('splatbot_launchesUsed')) || 0,
+            timeTaken: parseInt(localStorage.getItem('splatbot_timeTaken')) || 0,
+            isFlying: false,
+            hasBooster: false,
+            boosterUsed: false,
+            distance: 0,
+            runScrap: 0,
+            runMetalParts: 0,
+            power: 50,
+            powerDirection: 1,
+            splatted: false,
+            levelCompleteTriggered: false
+        };
+
+        // SplatBot Character Offsets & Variables
+        const bot = {
+            x: 120,
+            y: 0,
+            radius: 20,
+            vx: 0,
+            vy: 0,
+            rotation: 0
+        };
+
+        const blocks = [];
+        const particles = [];
+        const explosions = []; 
+        const birds = []; 
+        const metalPartsDrops = []; // Floating collectible gears falling from towers
+        let cameraX = 0;
+        let screenShake = 0; 
+        let gameTimeClock = 0;
+        let splatTimer = null; // Active timer reference for the Splat popup auto-hide
+
+        // Custom canvas graphics
+        const canvas = document.getElementById('physics-canvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+
+        // Defensive Helpers to completely avoid "Cannot set properties of null" errors
+        function safeSetText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+
+        function safeSetHtml(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
+        function safeSetAttribute(id, attr, value) {
+            const el = document.getElementById(id);
+            if (el) el.setAttribute(attr, value);
+        }
+
+        function safeAddListener(id, event, cb) {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(event, cb);
+        }
+
+        function resizeCanvas() {
+            if (!canvas) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            resetWorldEntities();
+            initBirds();
+        }
+
+        function initBirds() {
+            birds.length = 0;
+            for (let i = 0; i < 4; i++) {
+                birds.push({
+                    x: 150 + i * 350 + Math.random() * 100,
+                    y: 35 + Math.random() * 100,
+                    vx: -(0.2 + Math.random() * 0.35),
+                    vy: (Math.random() - 0.5) * 0.04,
+                    wingAngle: Math.random() * Math.PI * 2,
+                    wingSpeed: 0.02 + Math.random() * 0.02,
+                    size: 6 + Math.random() * 3
+                });
+            }
+        }
+
+        // Procedural map generation layout
+        function resetWorldEntities() {
+            if (!canvas) return;
+            blocks.length = 0;
+            const startX = PHYSICS_CONFIG.firstTowerX;
+            const groundY = canvas.height - PHYSICS_CONFIG.groundYOffset;
+
+            // Generate metallic block stack closer to launcher
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 2; col++) {
+                    blocks.push({
+                        x: startX + col * 45,
+                        y: groundY - (row + 1) * 45,
+                        width: 40,
+                        height: 40,
+                        type: 'metal',
+                        health: 1,
+                        color: '#64748b', 
+                        border: '#334155'  
+                    });
+                }
+            }
+
+            // TNT Box
+            blocks.push({
+                x: startX + 30,
+                y: groundY - 45 * 3,
+                width: 40,
+                height: 40,
+                type: 'tnt',
+                health: 1,
+                color: '#dc2626', 
+                border: '#7f1d1d'
+            });
+
+            // Slime Bouncers
+            blocks.push({
+                x: startX + 170,
+                y: groundY - 30,
+                width: 60,
+                height: 30,
+                type: 'slime',
+                health: Infinity,
+                color: '#22c55e', 
+                border: '#14532d'
+            });
+
+            blocks.push({
+                x: startX + 350,
+                y: groundY - 30,
+                width: 60,
+                height: 30,
+                type: 'slime',
+                health: Infinity,
+                color: '#22c55e',
+                border: '#14532d'
+            });
+        }
+
+        // Particle Burst System
+        function spawnParticles(x, y, color, count = 10, speedMult = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (Math.random() * 3 + 1.5) * speedMult;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1.5,
+                    radius: Math.random() * 3 + 2,
+                    color: color,
+                    life: 1.0,
+                    decay: Math.random() * 0.03 + 0.012
+                });
+            }
+        }
+
+        // Procedural gear/screw spawn on block crack
+        function spawnMetalPartsDrops(x, y, count = 1) {
+            for (let i = 0; i < count; i++) {
+                metalPartsDrops.push({
+                    x: x + (Math.random() - 0.5) * 15,
+                    y: y + (Math.random() - 0.5) * 15,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: -3 - Math.random() * 2.5,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: 0.04 + Math.random() * 0.04,
+                    collected: false,
+                    magnetized: false
+                });
+            }
+        }
+
+        // Save State persistence helper
+        function saveProfile() {
+            localStorage.setItem('splatbot_scrap', state.scrap);
+            localStorage.setItem('splatbot_metalParts', state.metalParts);
+            localStorage.setItem('splatbot_assemblyStage', state.assemblyProgress);
+            localStorage.setItem('splatbot_highScore', state.highScore);
+            localStorage.setItem('splatbot_engineLevel', state.engineLevel);
+            localStorage.setItem('splatbot_launchesUsed', state.launchesUsed);
+            localStorage.setItem('splatbot_timeTaken', state.timeTaken);
+        }
+
+        function renderBlueprintChecklist() {
+            const container = document.getElementById('assembly-checklist-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Loop stages from 1 onwards (Head is indexed at 0, built by default)
+            for (let i = 1; i < ASSEMBLY_STAGES.length; i++) {
+                const stage = ASSEMBLY_STAGES[i];
+                const isUnlocked = state.assemblyProgress >= i;
+                const isNextUnlockable = state.assemblyProgress === i - 1;
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `p-2.5 rounded-xl border flex justify-between items-center transition-all ${
+                    isUnlocked 
+                        ? 'bg-cyan-950/20 border-cyan-500/40 text-cyan-200' 
+                        : isNextUnlockable 
+                            ? 'bg-slate-900 border-yellow-500/50 text-slate-200 shadow-md shadow-yellow-500/5' 
+                            : 'bg-slate-950/50 border-slate-800 text-slate-500'
+                }`;
+
+                itemDiv.innerHTML = `
+                    <div class="flex flex-col gap-0.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] sm:text-xs font-bold title-font tracking-wide">${i}. ${stage.name}</span>
+                            ${isUnlocked ? '<span class="text-emerald-400 text-[9px] sm:text-[10px] font-bold">✅ READY</span>' : ''}
+                            ${isNextUnlockable ? '<span class="text-yellow-400 text-[9px] sm:text-[10px] font-bold animate-pulse">🛠️ TARGET</span>' : ''}
+                        </div>
+                        <span class="text-[8px] sm:text-[9px] leading-snug">${stage.desc}</span>
+                        ${isNextUnlockable 
+                            ? `<span class="text-[9px] sm:text-[10px] text-yellow-400 font-bold mt-1">Cost: ${state.metalParts} / ${stage.cost} 🔩</span>` 
+                            : isUnlocked 
+                                ? '' 
+                                : `<span class="text-[9px] sm:text-[10px] text-slate-500 mt-1">Requires ${stage.cost} 🔩</span>`
+                        }
+                    </div>
+                    <div>
+                        ${isUnlocked 
+                            ? '<span class="text-cyan-400 font-bold">✓</span>' 
+                            : isNextUnlockable && state.metalParts >= stage.cost 
+                                ? '<span class="text-yellow-400 font-bold animate-ping">🔨</span>' 
+                                : '<span class="text-slate-600 font-bold">🔲</span>'
+                        }
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            }
+
+            // Manage Assembly Button Actions
+            const currentStageIdx = state.assemblyProgress;
+            const nextStage = ASSEMBLY_STAGES[currentStageIdx + 1];
+            const assembleActionBtn = document.getElementById('assemble-action-btn');
+
+            if (assembleActionBtn) {
+                if (nextStage && state.metalParts >= nextStage.cost) {
+                    assembleActionBtn.disabled = false;
+                    assembleActionBtn.className = "w-full title-font py-3.5 px-4 rounded-xl text-xs tracking-wider text-slate-950 bg-gradient-to-b from-yellow-300 to-amber-400 hover:from-yellow-200 hover:to-amber-300 border-b-4 border-amber-600 active:border-b-0 active:translate-y-1 transition-all text-center uppercase shadow-lg shadow-yellow-500/10 cursor-pointer animate-bounce";
+                    assembleActionBtn.textContent = `ASSEMBLE: ${nextStage.name} (Cost ${nextStage.cost} 🔩)`;
+                } else if (!nextStage) {
+                    assembleActionBtn.disabled = true;
+                    assembleActionBtn.className = "w-full title-font py-3 px-4 rounded-xl text-xs tracking-wider text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 text-center uppercase";
+                    assembleActionBtn.textContent = "🚀 Sparky fully assembled!";
+                } else {
+                    assembleActionBtn.disabled = true;
+                    assembleActionBtn.className = "w-full title-font py-3 px-4 rounded-xl text-xs tracking-wider text-slate-500 bg-slate-900/60 cursor-not-allowed border border-slate-800/40 text-center uppercase";
+                    assembleActionBtn.textContent = `Need ${nextStage.cost - state.metalParts} more Metal Parts 🔩`;
+                }
+            }
+        }
+
+        function updateHUD() {
+            safeSetText('scrap-display', state.scrap);
+            safeSetText('metal-parts-display', state.metalParts);
+            safeSetText('run-scrap-display', state.runScrap);
+            safeSetText('run-metal-display', state.runMetalParts);
+            safeSetText('distance-display', Math.floor(state.distance) + 'm');
+            safeSetText('high-score-display', Math.floor(state.highScore) + 'm');
+            safeSetText('engine-tier-display', `Tier ${state.engineLevel}`);
+            
+            const cost = state.engineLevel * 30;
+            safeSetText('upgrade-cost-text', `Cost: ${cost} 🪙`);
+            
+            const upgradeBtn = document.getElementById('upgrade-btn');
+            if (upgradeBtn) {
+                if (state.scrap >= cost) {
+                    upgradeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    upgradeBtn.disabled = false;
+                } else {
+                    upgradeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    upgradeBtn.disabled = true;
+                }
+            }
+
+            // Calculate precise assembly completion percentages
+            const percentage = Math.round((state.assemblyProgress / (ASSEMBLY_STAGES.length - 1)) * 100);
+            safeSetText('blueprint-percentage-text', `${percentage}%`);
+            safeSetText('blueprint-btn-label', `Blueprints (${percentage}%)`);
+            safeSetText('obj-bar-progress', `${percentage}% Built`);
+
+            const objFactoryDot = document.getElementById('obj-factory-dot');
+            if (objFactoryDot) {
+                if (percentage >= 100) {
+                    objFactoryDot.className = "text-emerald-400 font-bold animate-pulse";
+                    objFactoryDot.innerHTML = "🏭 Factory Destination Active!";
+                } else {
+                    objFactoryDot.className = "text-slate-600";
+                    objFactoryDot.innerHTML = "🏭 Factory";
+                }
+            }
+
+            // Set svg circular progress bounds
+            safeSetAttribute('blueprint-radial-ring', 'stroke-dasharray', `${percentage}, 100`);
+
+            renderBlueprintChecklist();
+        }
+
+        // Trigger Level complete screens
+        function triggerLevelComplete() {
+            if (state.levelCompleteTriggered) return;
+            state.levelCompleteTriggered = true;
+            
+            playSynthSfx('victory');
+
+            // Apply big coin reward on victory
+            state.scrap += 500;
+            saveProfile();
+
+            // Set metric texts
+            safeSetText('stat-distance', `${Math.round(state.distance)}m`);
+            safeSetText('stat-launches', state.launchesUsed);
+            safeSetText('stat-scrap', `${state.scrap} 🪙`);
+            safeSetText('stat-metal', `${state.metalParts} 🔩`);
+            
+            const levelCompleteModal = document.getElementById('level-complete-modal');
+            if (levelCompleteModal) levelCompleteModal.classList.remove('hidden');
+        }
+
+        function updatePhysics(dt) {
+            if (!canvas) return;
+            const groundY = canvas.height - PHYSICS_CONFIG.groundYOffset;
+
+            // Accumulate active game clock seconds
+            gameTimeClock += dt;
+            if (gameTimeClock >= 60) {
+                state.timeTaken += 1;
+                gameTimeClock = 0;
+                saveProfile();
+            }
+
+            if (screenShake > 0) {
+                screenShake -= 0.4 * dt;
+                if (screenShake < 0) screenShake = 0;
+            }
+
+            // Power meter gauge oscillations
+            if (!state.isFlying) {
+                state.power += state.powerDirection * 0.6 * dt;
+                if (state.power >= 100) {
+                    state.power = 100;
+                    state.powerDirection = -1;
+                } else if (state.power <= 0) { 
+                    state.power = 0;
+                    state.powerDirection = 1;
+                }
+                const pBar = document.getElementById('power-bar');
+                if (pBar) pBar.style.width = state.power + '%';
+                safeSetText('power-value', Math.round(state.power) + '%');
+            }
+
+            // Active air flight
+            if (state.isFlying) {
+                // Use balanced gravity and float parameters from centralized config
+                bot.vy += PHYSICS_CONFIG.gravity;
+                bot.vx *= PHYSICS_CONFIG.airResistance;
+                bot.vy *= PHYSICS_CONFIG.airResistance;
+
+                bot.x += bot.vx;
+                bot.y += bot.vy;
+                bot.rotation += bot.vx * 0.015; 
+
+                // Camera follow lerp math
+                const targetCameraX = Math.max(0, bot.x - 220);
+                cameraX += (targetCameraX - cameraX) * 0.06 * dt;
+
+                // Track distance mapping coordinates
+                state.distance = Math.max(0, (bot.x - 120) / 10);
+
+                // Check Final Factory Arrival Level 1 goal
+                // Only active once ALL stages are assembled
+                if (state.assemblyProgress >= 10 && bot.x >= 15800) {
+                    state.isFlying = false;
+                    bot.vx = 0;
+                    bot.vy = 0;
+                    triggerLevelComplete();
+                }
+
+                // Handle item blocks collisions
+                for (let i = blocks.length - 1; i >= 0; i--) {
+                    const block = blocks[i];
+                    
+                    const closestX = Math.max(block.x, Math.min(bot.x, block.x + block.width));
+                    const closestY = Math.max(block.y, Math.min(bot.y, block.y + block.height));
+                    
+                    const distanceX = bot.x - closestX;
+                    const distanceY = bot.y - closestY;
+                    const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+                    if (distanceSquared < bot.radius * bot.radius) {
+                        if (block.type === 'metal') {
+                            state.runScrap += 10;
+                            
+                            // Chance to drop Metal Parts collectibles (65% drop chances)
+                            if (Math.random() < 0.65) {
+                                const dropCount = Math.random() < 0.3 ? 2 : 1;
+                                spawnMetalPartsDrops(block.x + 20, block.y + 20, dropCount);
+                                state.runMetalParts += dropCount;
+                            }
+
+                            spawnParticles(block.x + 20, block.y + 20, '#e2e8f0', 8, 0.8); 
+                            blocks.splice(i, 1);
+                            
+                            // Conserve horizontal speed dynamically (Set at 94% retention config)
+                            bot.vx *= PHYSICS_CONFIG.metalConservationX; 
+                            
+                            // Deflect upwards gently on smash to allow subsequent chain reactions
+                            bot.vy = PHYSICS_CONFIG.metalDeflectionY * Math.abs(bot.vy) + (Math.random() - 0.5) * 0.5; 
+                            playSynthSfx('click');
+                        } 
+                        else if (block.type === 'tnt') {
+                            state.runScrap += 50;
+                            
+                            explosions.push({
+                                x: block.x + block.width / 2,
+                                y: block.y + block.height / 2,
+                                radius: 10,
+                                maxRadius: 100,
+                                alpha: 1.0,
+                                rotation: Math.random() * Math.PI
+                            });
+
+                            screenShake = 12; 
+
+                            spawnParticles(block.x + 20, block.y + 20, '#ef4444', 18, 1.8); 
+                            spawnParticles(block.x + 20, block.y + 20, '#f97316', 15, 1.5); 
+                            spawnParticles(block.x + 20, block.y + 20, '#fbbf24', 15, 2.2); 
+                            
+                            blocks.splice(i, 1);
+                            
+                            // TNT impulse scaling naturally with engine tiers
+                            const tntScaleFactor = 1 + (state.engineLevel - 1) * 0.10;
+                            const tntX = PHYSICS_CONFIG.tntBaseImpulseX * tntScaleFactor;
+                            const tntY = PHYSICS_CONFIG.tntBaseImpulseY * tntScaleFactor;
+                            bot.vx += tntX;
+                            bot.vy = -tntY;
+                            playSynthSfx('bounce');
+                        } 
+                        else if (block.type === 'slime') {
+                            bot.vy = -Math.abs(bot.vy) * 1.3 - 1.2; 
+                            bot.vx = Math.max(bot.vx, 2.5) * 1.05; 
+                            spawnParticles(closestX, closestY, '#22c55e', 10, 0.8);
+                            playSynthSfx('bounce');
+                        }
+                        updateHUD();
+                    }
+                }
+
+                // Ground Crash Detection
+                if (bot.y >= groundY - bot.radius) {
+                    bot.y = groundY - bot.radius;
+                    state.isFlying = false;
+                    
+                    state.scrap += state.runScrap;
+                    state.metalParts += state.runMetalParts;
+
+                    state.highScore = Math.max(state.highScore, state.distance);
+                    state.splatted = true;
+
+                    const boosterBtn = document.getElementById('booster-btn');
+                    if (boosterBtn) {
+                        boosterBtn.disabled = true;
+                        boosterBtn.className = "flex-1 title-font py-2.5 sm:py-3.5 px-2 sm:px-4 rounded-2xl text-[10px] sm:text-xs tracking-wider text-white bg-slate-800 border-b-4 border-slate-950 cursor-not-allowed opacity-50 transition-all shadow-lg";
+                        boosterBtn.textContent = "BOOSTER (OFF)";
+                    }
+
+                    spawnParticles(bot.x, groundY, '#3b82f6', 15, 0.8);
+
+                    safeSetText('splat-banner-sub', `You flew ${Math.floor(state.distance)}m, earned ${state.runScrap}🪙, and recovered ${state.runMetalParts} 🔩!`);
+                    
+                    const splatBanner = document.getElementById('splat-banner');
+                    if (splatBanner) {
+                        splatBanner.classList.remove('scale-0');
+                        
+                        // Clear any pending timer to avoid overlap
+                        if (splatTimer) {
+                            clearTimeout(splatTimer);
+                        }
+                        
+                        // Display the pop-up/banner for exactly 2 seconds suitable for reading results
+                        splatTimer = setTimeout(() => {
+                            splatBanner.classList.add('scale-0');
+                        }, 2000); 
+                    }
+
+                    saveProfile();
+
+                    setTimeout(() => {
+                        resetWorldEntities();
+                    }, 1000);
+
+                    updateHUD();
+                }
+            } else {
+                bot.x = 120;
+                bot.y = groundY - bot.radius;
+                cameraX += (0 - cameraX) * 0.08 * dt;
+            }
+
+            // Metal Part collectible drops simulation with magnetic hover
+            for (let i = metalPartsDrops.length - 1; i >= 0; i--) {
+                const part = metalPartsDrops[i];
+                
+                // Normal physical drift gravity fall unless magnetized
+                if (!part.magnetized) {
+                    part.vy += 0.15 * dt;
+                    part.x += part.vx * dt;
+                    part.y += part.vy * dt;
+                    part.rotation += part.rotSpeed * dt;
+
+                    // Ground bounces
+                    if (part.y >= groundY - 6) {
+                        part.y = groundY - 6;
+                        part.vy = -part.vy * 0.4;
+                        part.vx *= 0.7;
+                    }
+
+                    // Check vacuum distance threshold to SplatBot
+                    const dx = bot.x - part.x;
+                    const dy = bot.y - part.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 140) {
+                        part.magnetized = true;
+                    }
+                } else {
+                    // Fly rapidly directly to SplatBot center
+                    const dx = bot.x - part.x;
+                    const dy = bot.y - part.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 15) {
+                        // Gathered successfully!
+                        metalPartsDrops.splice(i, 1);
+                        spawnParticles(part.x, part.y, '#22d3ee', 6, 0.5); // Cyan sparks
+                        playSynthSfx('click');
+                        continue;
+                    }
+
+                    // Accelerating magnetic pull speed
+                    part.x += (dx / distance) * 9 * dt;
+                    part.y += (dy / distance) * 9 * dt;
+                }
+            }
+
+            // Scenic glides birds
+            birds.forEach(b => {
+                b.x += b.vx * dt;
+                b.y += b.vy * dt;
+                b.wingAngle += b.wingSpeed * dt;
+
+                if (b.y < 20 || b.y > 140) b.vy = -b.vy;
+
+                const bLocalX = b.x - cameraX * 0.6;
+                if (bLocalX < -40) {
+                    b.x = cameraX * 0.6 + canvas.width + 40 + Math.random() * 80;
+                    b.y = 25 + Math.random() * 100;
+                    b.vx = -(0.2 + Math.random() * 0.35);
+                    b.wingAngle = Math.random() * Math.PI * 2;
+                }
+            });
+
+            // Spark smoke particle decay
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // TNT fire rings update
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                const exp = explosions[i];
+                exp.radius += 3.5 * dt;
+                exp.alpha -= 0.025 * dt;
+                if (exp.alpha <= 0) {
+                    explosions.splice(i, 1);
+                }
+            }
+        }
+
+        // High fidelity custom modular robot builder drawings
+        function drawSplatBot(ctx) {
+            ctx.save();
+            ctx.translate(bot.x, bot.y);
+            ctx.rotate(bot.rotation);
+
+            const prog = state.assemblyProgress;
+
+            // Draw shadow plate on floor
+            ctx.fillStyle = 'rgba(0,0,0,0.12)';
+            ctx.beginPath();
+            ctx.ellipse(0, bot.radius + 2, bot.radius - 2, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Setup styling variables
+            ctx.strokeStyle = '#1e293b'; // Slate outlines
+            ctx.lineWidth = 2.5;
+
+            // 1. Rocket Engine (Stage 9) - Behind chest
+            if (prog >= 9) {
+                ctx.fillStyle = '#475569';
+                ctx.beginPath();
+                ctx.roundRect(-8, 14, 16, 18, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                // Copper exhaust nozzle
+                ctx.fillStyle = '#b45309';
+                ctx.fillRect(-5, 32, 10, 6);
+
+                // Booster Flame trails if active flying
+                if (state.isFlying && !state.boosterUsed) {
+                    ctx.fillStyle = Math.random() < 0.5 ? '#f97316' : '#fbbf24';
+                    ctx.beginPath();
+                    ctx.moveTo(-4, 38);
+                    ctx.lineTo(0, 52 + Math.random() * 8);
+                    ctx.lineTo(4, 38);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
+            // 2. Left Arm (Stage 3)
+            if (prog >= 3) {
+                ctx.save();
+                ctx.translate(-15, 10);
+                ctx.rotate(0.3);
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.roundRect(-5, -3, 10, 18, 4);
+                ctx.fill();
+                ctx.stroke();
+                // Hand tool details
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillRect(-3, 15, 6, 4);
+                ctx.restore();
+            }
+
+            // 3. Right Arm (Stage 4)
+            if (prog >= 4) {
+                ctx.save();
+                ctx.translate(15, 10);
+                ctx.rotate(-0.3);
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.roundRect(-5, -3, 10, 18, 4);
+                ctx.fill();
+                ctx.stroke();
+                // Magnet tools
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(-4, 15, 8, 4);
+                ctx.restore();
+            }
+
+            // 4. Left Leg (Stage 6)
+            if (prog >= 6) {
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(-8, 18, 5, 16);
+                ctx.strokeRect(-8, 18, 5, 16);
+            }
+
+            // 5. Right Leg (Stage 7)
+            if (prog >= 7) {
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(3, 18, 5, 16);
+                ctx.strokeRect(3, 18, 5, 16);
+            }
+
+            // 6. Feet (Stage 8)
+            if (prog >= 8) {
+                ctx.fillStyle = '#334155';
+                ctx.beginPath();
+                ctx.roundRect(-11, 32, 7, 6, 2);
+                ctx.roundRect(4, 32, 7, 6, 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // 7. Neck joint (Stage 1)
+            if (prog >= 1) {
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-4, 4, 8, 10);
+                ctx.strokeRect(-4, 4, 8, 10);
+            }
+
+            // 8. Waist block (Stage 5)
+            if (prog >= 5) {
+                ctx.fillStyle = '#1e3a8a';
+                ctx.beginPath();
+                ctx.roundRect(-10, 14, 20, 8, 3);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // 9. Chest plate block (Stage 2)
+            if (prog >= 2) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.roundRect(-14, 0, 28, 20, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                // Micro fusion core round reactor light (Stage 10 Completion detail)
+                ctx.fillStyle = (prog >= 10 && Math.sin(Date.now() / 150) > 0) ? '#22d3ee' : '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(0, 10, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // 10. Head box (Stage 0: ALWAYS UNLOCKED)
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.roundRect(-14, -18, 28, 24, 7);
+            ctx.fill();
+            ctx.stroke();
+
+            // Face digital black screen
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.roundRect(-11, -15, 22, 14, 4);
+            ctx.fill();
+
+            // Glow digital facial screens
+            ctx.fillStyle = state.isFlying ? '#f59e0b' : '#10b981'; // Green neutral, amber in flight
+            ctx.beginPath();
+            ctx.arc(-5, -8, 2.5, 0, Math.PI * 2);
+            ctx.arc(5, -8, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Propeller spin hat toy (Gives nice fun touch details)
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.ellipse(0, -20, 7, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-1, -25, 2, 5); // Stem shaft
+            
+            // Rotating propeller blades
+            ctx.save();
+            ctx.translate(0, -26);
+            ctx.rotate(state.isFlying ? Date.now() * 0.05 : Date.now() * 0.01);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-9, -1, 18, 2);
+            ctx.restore();
+
+            // 11. Custom Antenna glowing beacon (Stage 10 Final assembled reward)
+            if (prog >= 10) {
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(-1, -33, 2, 8);
+                // Glow beacon ring
+                ctx.fillStyle = Math.sin(Date.now() / 100) > 0 ? '#10b981' : '#34d399';
+                ctx.beginPath();
+                ctx.arc(0, -35, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function drawScene() {
+            if (!canvas || !ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const groundY = canvas.height - PHYSICS_CONFIG.groundYOffset;
+
+            // Sky backgrounds Parallax
+            ctx.save();
+            ctx.translate(-cameraX * 0.5, 0); 
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.arc(300, 100, 40, 0, Math.PI * 2);
+            ctx.arc(340, 90, 50, 0, Math.PI * 2);
+            ctx.arc(390, 100, 40, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(800, 140, 30, 0, Math.PI * 2);
+            ctx.arc(830, 130, 40, 0, Math.PI * 2);
+            ctx.arc(870, 140, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Parallax Birds layer
+            ctx.save();
+            ctx.translate(-cameraX * 0.6, 0);
+            ctx.strokeStyle = '#64748b'; 
+            ctx.lineWidth = 1.8;
+            birds.forEach(b => {
+                ctx.beginPath();
+                const wingY = Math.sin(b.wingAngle) * (b.size * 0.5);
+                ctx.moveTo(b.x - b.size, b.y + wingY);
+                ctx.quadraticCurveTo(b.x - b.size * 0.5, b.y - b.size * 0.3, b.x, b.y);
+                ctx.quadraticCurveTo(b.x + b.size * 0.5, b.y - b.size * 0.3, b.x + b.size, b.y + wingY);
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            // Camera Viewport translates & shakes
+            ctx.save();
+
+            if (screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * screenShake;
+                const shakeY = (Math.random() - 0.5) * screenShake;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            ctx.translate(-cameraX, 0);
+
+            // Draw End Level 1 goal - Robot Factory (Coordinates around x = 1600m / 16000px)
+            // Visually rendered only if Sparky has been fully assembled
+            if (state.assemblyProgress >= 10) {
+                const factoryX = 15800;
+                
+                // Draw Giant Hangar Frame
+                ctx.fillStyle = '#1e293b'; // Heavy factory grey
+                ctx.strokeStyle = '#0891b2'; // Neon cyan outlines
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.roundRect(factoryX, groundY - 320, 450, 320, [30, 30, 0, 0]);
+                ctx.fill();
+                ctx.stroke();
+
+                // Warn striped caution poles
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(factoryX + 20, groundY - 320, 20, 320);
+                ctx.fillRect(factoryX + 410, groundY - 320, 20, 320);
+                ctx.fillStyle = '#0f172a';
+                for (let h = 0; h < 10; h++) {
+                    ctx.fillRect(factoryX + 20, groundY - 320 + h * 32, 20, 12);
+                    ctx.fillRect(factoryX + 410, groundY - 320 + h * 32, 20, 12);
+                }
+
+                // Hangar automated sliding door (Drawn open if SplatBot is super close)
+                const doorClosedHeight = bot.x > factoryX - 300 ? 50 : 220;
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(factoryX + 80, groundY - doorClosedHeight, 290, doorClosedHeight, [10, 10, 0, 0]);
+                ctx.fill();
+                ctx.stroke();
+
+                // Conveyor belts drawing
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(factoryX + 60, groundY - 15, 330, 15);
+
+                // Moving machinery flashing warning neon beacons
+                ctx.fillStyle = (Math.sin(Date.now() / 150) > 0) ? '#ef4444' : '#7f1d1d';
+                ctx.beginPath();
+                ctx.arc(factoryX + 120, groundY - 260, 12, 0, Math.PI * 2);
+                ctx.arc(factoryX + 330, groundY - 260, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Giant Factory Label
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 22px "Fredoka One", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('SPARKY REPAIR FACTORY', factoryX + 225, groundY - 290);
+
+                // Direction Neon Arrows pointing inside
+                ctx.fillStyle = '#22d3ee';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillText('➔ ENTER ➔', factoryX + 225, groundY - 80);
+            }
+
+            // Draw standard level target block arrays
+            blocks.forEach(block => {
+                if (block.type === 'metal') {
+                    ctx.fillStyle = '#64748b'; 
+                    ctx.strokeStyle = '#334155'; 
+                    ctx.lineWidth = 3;
+
+                    ctx.beginPath();
+                    ctx.roundRect(block.x, block.y, block.width, block.height, 6);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Diagonal shiny highlight
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                    ctx.beginPath();
+                    ctx.moveTo(block.x + 3, block.y + 3);
+                    ctx.lineTo(block.x + 22, block.y + 3);
+                    ctx.lineTo(block.x + 3, block.y + 22);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Bolts corner rivets
+                    ctx.fillStyle = '#334155';
+                    ctx.beginPath();
+                    ctx.arc(block.x + 6, block.y + 6, 2, 0, Math.PI * 2); 
+                    ctx.arc(block.x + block.width - 6, block.y + 6, 2, 0, Math.PI * 2); 
+                    ctx.arc(block.x + 6, block.y + block.height - 6, 2, 0, Math.PI * 2); 
+                    ctx.arc(block.x + block.width - 6, block.y + block.height - 6, 2, 0, Math.PI * 2); 
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = block.color;
+                    ctx.strokeStyle = block.border;
+                    ctx.lineWidth = 3;
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(block.x, block.y, block.width, block.height, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // TNT Red caution marks
+                    ctx.fillStyle = '#7f1d1d';
+                    ctx.beginPath();
+                    ctx.moveTo(block.x + 5, block.y + 5);
+                    ctx.lineTo(block.x + 15, block.y + 5);
+                    ctx.lineTo(block.x + 5, block.y + 15);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('TNT', block.x + 20, block.y + 24);
+                }
+
+                if (block.type === 'slime') {
+                    ctx.fillStyle = '#15803d';
+                    ctx.beginPath();
+                    ctx.arc(block.x + 15, block.y + 10, 6, 0, Math.PI * 2);
+                    ctx.arc(block.x + 45, block.y + 12, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Draw metal parts drops (falling gears)
+            metalPartsDrops.forEach(part => {
+                ctx.save();
+                ctx.translate(part.x, part.y);
+                ctx.rotate(part.rotation);
+
+                // Draw rotating gears silhouette
+                ctx.fillStyle = '#38bdf8';
+                ctx.strokeStyle = '#0369a1';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                // 6 tooth gear design path
+                for (let g = 0; g < 6; g++) {
+                    const angle = (g * Math.PI) / 3;
+                    ctx.lineTo(Math.cos(angle) * 8, Math.sin(angle) * 8);
+                    ctx.lineTo(Math.cos(angle + 0.2) * 11, Math.sin(angle + 0.2) * 11);
+                    ctx.lineTo(Math.cos(angle + 0.3) * 11, Math.sin(angle + 0.3) * 11);
+                    ctx.lineTo(Math.cos(angle + 0.5) * 8, Math.sin(angle + 0.5) * 8);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Core pin hole
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+
+            // Cannon catapult base
+            ctx.save();
+            ctx.translate(120, groundY);
+            ctx.rotate(-Math.PI / 5);
+            ctx.fillStyle = '#475569';
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.roundRect(-20, -50, 40, 60, [10, 10, 0, 0]);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Render modular assembled SplatBot
+            drawSplatBot(ctx);
+
+            // Active visual particles decay
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Animated explosives
+            explosions.forEach(exp => {
+                ctx.save();
+                ctx.globalAlpha = exp.alpha;
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.beginPath();
+                ctx.arc(exp.x, exp.y, exp.radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.7)';
+                ctx.beginPath();
+                ctx.arc(exp.x, exp.y, exp.radius * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+                ctx.lineWidth = 12;
+                ctx.beginPath();
+                ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.restore();
+            });
+
+            // Distance marker coordinates floor labels
+            // Once Sparky is assembled, marker expands infinitely to guide players to Factory (1600m)
+            const maximumMarkers = state.assemblyProgress >= 10 ? 42 : 12;
+            for (let i = 1; i <= maximumMarkers; i++) {
+                const markerX = 120 + i * 400;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText(`${i * 40}m`, markerX, groundY + 25);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.15)';
+                ctx.fillRect(markerX, groundY, 2, 10);
+            }
+
+            ctx.restore(); // Restore shaking maps & scroll coordinates matrices
+
+            // Static soil grounds
+            ctx.fillStyle = '#f59e0b'; 
+            ctx.fillRect(0, groundY, canvas.width, PHYSICS_CONFIG.groundYOffset);
+            ctx.fillStyle = '#d97706'; 
+            ctx.fillRect(0, groundY, canvas.width, 6);
+        }
+
+        let lastTime = 0;
+        function loop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 16.66; 
+            lastTime = timestamp;
+
+            updatePhysics(dt);
+            drawScene();
+
+            requestAnimationFrame(loop);
+        }
+
+        // Project bootloader
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            updateHUD();
+            
+            // Set up Event Listeners using defensive query binders
+            safeAddListener('reset-prog-btn', 'click', () => {
+                playSynthSfx('click');
+                localStorage.clear();
+                state.scrap = 10;
+                state.metalParts = 0;
+                state.assemblyProgress = 0;
+                state.highScore = 0;
+                state.engineLevel = 1;
+                state.launchesUsed = 0;
+                state.timeTaken = 0;
+                state.isFlying = false;
+                saveProfile();
+                updateHUD();
+                resetWorldEntities();
+            });
+
+            safeAddListener('toggle-blueprint-btn', 'click', () => {
+                playSynthSfx('click');
+                const panel = document.getElementById('blueprint-panel');
+                if (panel) panel.classList.toggle('translate-x-full');
+            });
+
+            safeAddListener('close-blueprint-btn', 'click', () => {
+                playSynthSfx('click');
+                const panel = document.getElementById('blueprint-panel');
+                if (panel) panel.classList.add('translate-x-full');
+            });
+
+            safeAddListener('assemble-action-btn', 'click', () => {
+                const nextStageIdx = state.assemblyProgress + 1;
+                const targetStage = ASSEMBLY_STAGES[nextStageIdx];
+                if (targetStage && state.metalParts >= targetStage.cost) {
+                    state.metalParts -= targetStage.cost;
+                    state.assemblyProgress = nextStageIdx;
+                    playSynthSfx('weld');
+                    saveProfile();
+                    updateHUD();
+                    
+                    // Spawn beautiful cybernetic cyan and spark particles around the blueprint shop tab
+                    spawnParticles(canvas.width - 200, canvas.height / 3, '#06b6d4', 25, 2.0);
+                    spawnParticles(canvas.width - 200, canvas.height / 3, '#fbbf24', 20, 1.5);
+                    
+                    // Custom banner flash congratulating user
+                    safeSetText('splat-banner-sub', `SPARKY'S ${targetStage.name.toUpperCase()} SUCCESSFULLY LOCKED IN! 🔩`);
+                    const banner = document.getElementById('splat-banner');
+                    if (banner) banner.classList.remove('scale-0');
+                    setTimeout(() => { 
+                        const b = document.getElementById('splat-banner');
+                        if (b) b.classList.add('scale-0'); 
+                    }, 2200);
+                }
+            });
+
+            safeAddListener('upgrade-btn', 'click', () => {
+                const cost = state.engineLevel * 30;
+                if (state.scrap >= cost) {
+                    state.scrap -= cost;
+                    state.engineLevel++;
+                    playSynthSfx('click');
+                    saveProfile();
+                    updateHUD();
+                    spawnParticles(canvas.width - 150, canvas.height - 40, '#34d399', 15);
+                }
+            });
+
+            safeAddListener('launch-btn', 'click', () => {
+                if (state.isFlying) return;
+
+                // Increment launch metrics
+                state.launchesUsed++;
+                saveProfile();
+
+                // Scaled base velocity factor built cleanly around configuration matrices
+                const scaleFactor = 1 + (state.engineLevel - 1) * PHYSICS_CONFIG.progressionFactor;
+                const baseForce = PHYSICS_CONFIG.baseLaunchForce * scaleFactor; 
+                const launchAngle = -Math.PI / 5; 
+                const powerRatio = state.power / 100;
+
+                bot.vx = Math.cos(launchAngle) * baseForce * powerRatio;
+                bot.vy = Math.sin(launchAngle) * baseForce * powerRatio;
+                
+                state.isFlying = true;
+                state.hasBooster = true;
+                state.boosterUsed = false;
+                state.runScrap = 0;
+                state.runMetalParts = 0;
+                state.distance = 0;
+                state.splatted = false;
+                
+                const banner = document.getElementById('splat-banner');
+                if (banner) banner.classList.add('scale-0');
+
+                // Set up active boosters matching equipped rocket engine stages
+                const boosterBtn = document.getElementById('booster-btn');
+                if (boosterBtn) {
+                    boosterBtn.disabled = false;
+                    boosterBtn.className = "flex-1 title-font py-2.5 sm:py-3.5 px-2 sm:px-4 rounded-2xl text-[10px] sm:text-xs tracking-wider text-slate-950 bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 border-b-4 border-red-800 active:border-b-0 active:translate-y-1 transition-all shadow-lg booster-glow";
+                    boosterBtn.textContent = "BOOST NOW!";
+                }
+
+                // Launcher smoke puffs
+                spawnParticles(120, canvas.height - PHYSICS_CONFIG.groundYOffset, '#cbd5e1', 20, 1.2);
+                playSynthSfx('click');
+            });
+
+            safeAddListener('booster-btn', 'click', () => {
+                if (!state.isFlying || state.boosterUsed) return;
+
+                // Booster strength increases dynamically with active engine tier level
+                const boosterStageMultiplier = state.assemblyProgress >= 9 ? 1.5 : 1.0;
+                const boostX = (PHYSICS_CONFIG.boosterBaseX + state.engineLevel * PHYSICS_CONFIG.boosterStepX) * boosterStageMultiplier;
+                const boostY = (PHYSICS_CONFIG.boosterBaseY + state.engineLevel * PHYSICS_CONFIG.boosterStepY) * boosterStageMultiplier;
+                bot.vx += boostX;
+                bot.vy -= boostY; 
+                state.boosterUsed = true;
+                state.hasBooster = false;
+
+                const boosterBtn = document.getElementById('booster-btn');
+                if (boosterBtn) {
+                    boosterBtn.disabled = true;
+                    boosterBtn.className = "flex-1 title-font py-2.5 sm:py-3.5 px-2 sm:px-4 rounded-2xl text-[10px] sm:text-xs tracking-wider text-white bg-slate-800 border-b-4 border-slate-950 cursor-not-allowed opacity-50 transition-all shadow-lg";
+                    boosterBtn.textContent = "BOOST USED";
+                }
+
+                spawnParticles(bot.x, bot.y, '#f97316', 25, 1.5); 
+                playSynthSfx('boost');
+            });
+
+            safeAddListener('level-complete-continue-btn', 'click', () => {
+                const completeModal = document.getElementById('level-complete-modal');
+                if (completeModal) completeModal.classList.add('hidden');
+                playSynthSfx('click');
+                // Reset assembly and start new loop
+                state.assemblyProgress = 0;
+                state.levelCompleteTriggered = false;
+                saveProfile();
+                updateHUD();
+                resetWorldEntities();
+            });
+
+            requestAnimationFrame(loop);
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+    </script>
+</body>
+</html>

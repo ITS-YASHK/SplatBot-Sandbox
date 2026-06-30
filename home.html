@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SplatBot Sandbox - Home</title>
+    <link rel="stylesheet" href="home.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="background-layer">
+        <div class="gear gear-large">⚙</div>
+        <div class="gear gear-medium">⚙</div>
+        <div class="gear gear-small">⚙</div>
+        <div class="sparks-container" id="sparks-container"></div>
+        <div class="blueprint-screen"></div>
+        <div class="factory-light"></div>
+    </div>
+
+    <div id="game-ui">
+        
+        <header>
+            <div class="resource-panel">
+                <div class="resource-card">
+                    <span class="resource-icon drop-shadow">🪙</span>
+                    <span id="coin-counter" class="resource-value">0</span>
+                </div>
+                <div class="resource-card">
+                    <span class="resource-icon drop-shadow">🔩</span>
+                    <span id="metal-counter" class="resource-value">0</span>
+                </div>
+            </div>
+
+            <div class="logo-container">
+                <h1 class="game-logo" data-text="SPLATBOT">SPLATBOT</h1>
+                <h2 class="sub-logo">SANDBOX</h2>
+            </div>
+
+            <button class="icon-btn settings-btn" onclick="openModal('settings-modal')">⚙</button>
+        </header>
+
+        <aside class="side-menu">
+            <button class="nav-btn" onclick="openModal('worlds-modal')">
+                <span class="nav-icon">🌗</span>
+                <span class="nav-label">THEME</span>
+            </button>
+            <button class="nav-btn" onclick="openModal('styles-modal')">
+                <span class="nav-icon">🎩</span>
+                <span class="nav-label">STYLE</span>
+            </button>
+        </aside>
+
+        <main class="center-stage">
+            <div class="robot-wrapper">
+                <div class="splatbot">
+                    <div id="equipped-hat-display" class="robot-hat"></div>
+                    <div class="robot-antenna"><div class="antenna-bulb"></div></div>
+                    <div class="robot-head">
+                        <div class="robot-eye left"></div>
+                        <div class="robot-eye right"></div>
+                        <div class="robot-mouth"></div>
+                    </div>
+                    <div class="robot-body">
+                        <div class="core-glow"></div>
+                    </div>
+                    <div class="robot-thruster">
+                        <div class="thruster-flame"></div>
+                    </div>
+                </div>
+                <div class="robot-shadow"></div>
+            </div>
+        </main>
+
+        <footer>
+            <button class="next-btn" onclick="goToGame()">
+                <span class="next-text">NEXT</span>
+                <div class="btn-glow"></div>
+            </button>
+        </footer>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <button class="close-btn" onclick="closeModal('settings-modal')">✕</button>
+            <h2 class="modal-title">SETTINGS</h2>
+            <div class="modal-content settings-list">
+                <button class="toggle-btn" id="toggle-music" onclick="toggleSetting('music')">Music: ON</button>
+                <button class="toggle-btn" id="toggle-sound" onclick="toggleSetting('sound')">Sound: ON</button>
+                <button class="action-btn">Credits</button>
+                <button class="action-btn">Privacy Policy</button>
+                <button class="danger-btn" onclick="resetProgress()">Reset Progress</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="worlds-modal" class="modal-overlay hidden">
+        <div class="modal-box large-modal">
+            <button class="close-btn" onclick="closeModal('worlds-modal')">✕</button>
+            <h2 class="modal-title">SELECT WORLD</h2>
+            <div class="modal-content grid-list" id="worlds-grid">
+                </div>
+        </div>
+    </div>
+
+    <div id="styles-modal" class="modal-overlay hidden">
+        <div class="modal-box large-modal">
+            <button class="close-btn" onclick="closeModal('styles-modal')">✕</button>
+            <h2 class="modal-title">ROBOT STYLE</h2>
+            <div class="modal-content grid-list" id="styles-grid">
+                </div>
+        </div>
+    </div>
+
+    <script src="home.js"></script>
+    <div id="transition-overlay" class="page-transition"></div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SplatBot Sandbox - World Map</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="map.css">
+</head>
+<body>
+
+    <div id="map-viewport">
+        <div id="map-scroll-area">
+            <svg id="svg-road-layer" width="100%" height="100%"></svg>
+            
+            <div id="decorations-layer"></div>
+            <div id="nodes-layer"></div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        
+        <header class="top-hud">
+            <div class="resource-group">
+                <div class="resource-pill">
+                    <div class="resource-icon drop-shadow">🪙</div>
+                    <span id="ui-coins">0</span>
+                </div>
+                <div class="resource-pill">
+                    <div class="resource-icon drop-shadow">🔩</div>
+                    <span id="ui-metal">0</span>
+                </div>
+            </div>
+
+            <!-- <div class="text-container">
+                <h1 class="text-logo" data-text="MAP">MAP</h1>
+            </div> -->
+
+            <div class="resource-group-2">
+                <button class="settings-btn" onclick="toggleSettings()">⚙</button>
+                <button class="home-btn" onclick="goHome()">🏠</button>
+        </header>
+
+        <footer class="bottom-controls">
+            <div class="selected-level-badge" id="ui-level-badge">SELECT MISSION</div>
+            <button id="play-button" class="play-btn locked" onclick="startGame()">
+                <span class="play-text">PLAY</span>
+                <div class="btn-glow"></div>
+            </button>
+        </footer>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <button class="close-btn" onclick="toggleSettings()">✕</button>
+            <h2 class="modal-title">SETTINGS</h2>
+            <div class="modal-content">
+                <button class="toggle-btn" id="setting-music" onclick="toggleOption('music')">Music: ON</button>
+                <button class="toggle-btn" id="setting-sound" onclick="toggleOption('sound')">Sound: ON</button>
+                <button class="menu-btn">Credits</button>
+                <button class="menu-btn">Privacy Policy</button>
+                <button class="danger-btn" onclick="hardReset()">Reset Progress</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="map.js"></script>
+    <div id="transition-overlay" class="page-transition"></div>
+</body>
+</html>
